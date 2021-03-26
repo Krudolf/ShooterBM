@@ -84,6 +84,9 @@ protected:
 	
 	/** Fires a projectile. */
 	void OnFire();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerOnFire();
 
 	/** Resets HMD orientation and position in VR. */
 	void OnResetVR();

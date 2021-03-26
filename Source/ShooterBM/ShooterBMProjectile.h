@@ -23,7 +23,7 @@ public:
 	AShooterBMProjectile();
 
 	/** called when projectile hits something */
-	UFUNCTION()
+	UFUNCTION(Server, Reliable)
 	void OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 	/** Returns CollisionComp subobject **/
