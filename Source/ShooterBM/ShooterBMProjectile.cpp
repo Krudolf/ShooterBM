@@ -1,6 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "ShooterBMProjectile.h"
+
+#include "ShooterBMCharacter.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Components/SphereComponent.h"
 
@@ -37,10 +39,27 @@ AShooterBMProjectile::AShooterBMProjectile()
 void AShooterBMProjectile::OnHit_Implementation(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	// Only add impulse and destroy projectile if we hit a physics
-	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL) && OtherComp->IsSimulatingPhysics())
+	if ((OtherActor != NULL) && (OtherActor != this) && (OtherComp != NULL))
 	{
-		OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());
+		bool bDestroy = false;
+		if(OtherComp->IsSimulatingPhysics())
+		{
+			bDestroy = true;
+			OtherComp->AddImpulseAtLocation(GetVelocity() * 100.0f, GetActorLocation());			
+		}
 
-		Destroy();
+		AShooterBMCharacter* Player = Cast<AShooterBMCharacter>(OtherActor);
+		if(Player != nullptr)
+		{
+			//GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Cyan, TEXT("Player hitted"));
+			const FPointDamageEvent PointDamageEvent(Damage, Hit, NormalImpulse, nullptr);
+			Player->TakeDamage(Damage, PointDamageEvent, GetOwner()->GetInstigatorController(), Player);
+			bDestroy = true;
+		}
+		
+		if(bDestroy)
+		{
+			Destroy();	
+		}
 	}
 }

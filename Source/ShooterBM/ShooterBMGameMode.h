@@ -13,6 +13,7 @@ class AShooterBMGameMode : public AGameModeBase
 
 public:
 	AShooterBMGameMode();
+	
 };
 
 

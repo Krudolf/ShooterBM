@@ -8,9 +8,11 @@
 #include "Components/InputComponent.h"
 #include "GameFramework/InputSettings.h"
 #include "HeadMountedDisplayFunctionLibrary.h"
+#include "HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
+#include "Components/WidgetComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -80,6 +82,10 @@ AShooterBMCharacter::AShooterBMCharacter()
 	VR_MuzzleLocation->SetRelativeLocation(FVector(0.000004, 53.999992, 10.000000));
 	VR_MuzzleLocation->SetRelativeRotation(FRotator(0.0f, 90.0f, 0.0f));		// Counteract the rotation of the VR gun model.
 
+	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
+
+	//HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
+	
 	// Uncomment the following line to turn motion controllers on by default:
 	//bUsingMotionControllers = true;
 }
@@ -138,6 +144,22 @@ void AShooterBMCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterBMCharacter::LookUpAtRate);
 }
 
+float AShooterBMCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
+	AActor* DamageCauser)
+{
+	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	HealthComponent->TakeDamage(DamageAmount);
+
+	if(HealthComponent->GetHealth() == 0)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Green, TEXT("Player id dead"));
+		SetActorHiddenInGame(true);
+	}
+
+	return DamageAmount;
+}
+
 void AShooterBMCharacter::OnFire()
 {
 	// try and fire a projectile
@@ -186,7 +208,8 @@ void AShooterBMCharacter::ServerOnFire_Implementation()
 				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
 				// spawn the projectile at the muzzle
-				World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+				AShooterBMProjectile* TempProjectile = World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+				TempProjectile->SetOwner(this);
 			}
 		}
 	}

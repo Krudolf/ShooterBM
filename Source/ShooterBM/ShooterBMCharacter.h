@@ -45,6 +45,12 @@ class AShooterBMCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	class UMotionControllerComponent* L_MotionController;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	class UHealthComponent* HealthComponent;
+	
+	//UPROPERTY(VisibleAnywhere)
+	//class UWidgetComponent* HealthBarWidget;
+
 public:
 	AShooterBMCharacter();
 
@@ -80,8 +86,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Gameplay)
 	uint32 bUsingMotionControllers : 1;
 
+	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+
 protected:
-	
 	/** Fires a projectile. */
 	void OnFire();
 	
