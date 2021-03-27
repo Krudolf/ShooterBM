@@ -88,6 +88,13 @@ public:
 
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
+	UFUNCTION(NetMulticast, Reliable)
+	void Die();
+
+	void CallDestroy();
+	
+	FTimerHandle DestroyHandle;
+
 protected:
 	/** Fires a projectile. */
 	void OnFire();

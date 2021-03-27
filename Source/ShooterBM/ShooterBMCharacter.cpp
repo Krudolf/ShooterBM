@@ -11,8 +11,11 @@
 #include "HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
+#include "ShooterBMGameMode.h"
+#include "ShooterBMPlayerController.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
 #include "Components/WidgetComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -153,11 +156,33 @@ float AShooterBMCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Da
 
 	if(HealthComponent->GetHealth() == 0)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Green, TEXT("Player id dead"));
-		SetActorHiddenInGame(true);
+		Die();
+
+		if(AShooterBMPlayerController* PlayerController = Cast<AShooterBMPlayerController>(GetController()))
+		{
+			PlayerController->Respawn();
+		}
 	}
 
 	return DamageAmount;
+}
+
+void AShooterBMCharacter::CallDestroy()
+{
+	if(HasAuthority())
+	{
+		Destroy();
+	}
+}
+
+void AShooterBMCharacter::Die_Implementation()
+{
+	GetCapsuleComponent()->DestroyComponent();
+	GetCharacterMovement()->DisableMovement();
+	GetMesh1P()->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
+	GetMesh1P()->SetAllBodiesSimulatePhysics(true);
+
+	GetWorld()->GetTimerManager().SetTimer(DestroyHandle, this, &AShooterBMCharacter::CallDestroy, 2.f, false);
 }
 
 void AShooterBMCharacter::OnFire()
@@ -166,17 +191,17 @@ void AShooterBMCharacter::OnFire()
 	ServerOnFire();
 
 	// try and play the sound if specified
-	if (FireSound != NULL)
+	if (FireSound != nullptr)
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, FireSound, GetActorLocation());
 	}
 
 	// try and play a firing animation if specified
-	if (FireAnimation != NULL)
+	if (FireAnimation != nullptr)
 	{
 		// Get the animation object for the arms mesh
 		UAnimInstance* AnimInstance = Mesh1P->GetAnimInstance();
-		if (AnimInstance != NULL)
+		if (AnimInstance != nullptr)
 		{
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
@@ -186,10 +211,10 @@ void AShooterBMCharacter::OnFire()
 void AShooterBMCharacter::ServerOnFire_Implementation()
 {
 	// try and fire a projectile
-	if (ProjectileClass != NULL)
+	if (ProjectileClass != nullptr)
 	{
 		UWorld* const World = GetWorld();
-		if (World != NULL)
+		if (World != nullptr)
 		{
 			if (bUsingMotionControllers)
 			{
