@@ -98,7 +98,7 @@ public:
 protected:
 	/** Fires a projectile. */
 	void OnFire();
-	
+
 	UFUNCTION(Server, Reliable)
 	void ServerOnFire();
 

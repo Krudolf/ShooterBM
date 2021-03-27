@@ -24,6 +24,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
 AShooterBMCharacter::AShooterBMCharacter()
 {
+	bReplicates = true;
+	
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(55.f, 96.0f);
 
@@ -119,6 +121,9 @@ void AShooterBMCharacter::BeginPlay()
 
 void AShooterBMCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
+	
+	bReplicates = true;
+	
 	// set up gameplay key bindings
 	check(PlayerInputComponent);
 
@@ -150,21 +155,23 @@ void AShooterBMCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 float AShooterBMCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
 	AActor* DamageCauser)
 {
-	Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-
-	HealthComponent->TakeDamage(DamageAmount);
-
-	if(HealthComponent->GetHealth() == 0)
+	if(HasAuthority())
 	{
-		Die();
-
-		if(AShooterBMPlayerController* PlayerController = Cast<AShooterBMPlayerController>(GetController()))
+		HealthComponent->TakeDamage(DamageAmount);
+		if(HealthComponent->GetHealth() == 0)
 		{
-			PlayerController->Respawn();
+			Die();
+
+			if(AShooterBMPlayerController* PlayerController = Cast<AShooterBMPlayerController>(GetController()))
+			{
+				PlayerController->Respawn();
+			}
 		}
+
+		return DamageAmount;
 	}
 
-	return DamageAmount;
+	return 0.f;
 }
 
 void AShooterBMCharacter::CallDestroy()
@@ -188,7 +195,15 @@ void AShooterBMCharacter::Die_Implementation()
 void AShooterBMCharacter::OnFire()
 {
 	// try and fire a projectile
-	ServerOnFire();
+	if (ProjectileClass != nullptr)
+	{
+		UWorld* const World = GetWorld();
+		if (World != nullptr)
+		{
+			ServerOnFire();
+		}
+	}
+	
 
 	// try and play the sound if specified
 	if (FireSound != nullptr)
@@ -210,32 +225,22 @@ void AShooterBMCharacter::OnFire()
 
 void AShooterBMCharacter::ServerOnFire_Implementation()
 {
-	// try and fire a projectile
 	if (ProjectileClass != nullptr)
 	{
 		UWorld* const World = GetWorld();
 		if (World != nullptr)
 		{
-			if (bUsingMotionControllers)
-			{
-				const FRotator SpawnRotation = VR_MuzzleLocation->GetComponentRotation();
-				const FVector SpawnLocation = VR_MuzzleLocation->GetComponentLocation();
-				World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation);
-			}
-			else
-			{
-				const FRotator SpawnRotation = GetControlRotation();
-				// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
-				const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
+			const FRotator SpawnRotation = GetControlRotation();
+			// MuzzleOffset is in camera space, so transform it to world space before offsetting from the character location to find the final muzzle position
+			const FVector SpawnLocation = ((FP_MuzzleLocation != nullptr) ? FP_MuzzleLocation->GetComponentLocation() : GetActorLocation()) + SpawnRotation.RotateVector(GunOffset);
 
-				//Set Spawn Collision Handling Override
-				FActorSpawnParameters ActorSpawnParams;
-				ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
+			//Set Spawn Collision Handling Override
+			FActorSpawnParameters ActorSpawnParams;
+			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
-				// spawn the projectile at the muzzle
-				AShooterBMProjectile* TempProjectile = World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-				TempProjectile->SetOwner(this);
-			}
+			// spawn the projectile at the muzzle
+			AShooterBMProjectile* TempProjectile = World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
+			TempProjectile->SetOwner(GetController());
 		}
 	}
 }

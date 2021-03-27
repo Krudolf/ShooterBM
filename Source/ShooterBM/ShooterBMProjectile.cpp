@@ -8,11 +8,17 @@
 
 AShooterBMProjectile::AShooterBMProjectile() 
 {
+	
+	bReplicates = true;
+	
 	// Use a sphere as a simple collision representation
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComp"));
 	CollisionComp->InitSphereRadius(5.0f);
 	CollisionComp->BodyInstance.SetCollisionProfileName("Projectile");
-	CollisionComp->OnComponentHit.AddDynamic(this, &AShooterBMProjectile::OnHit);		// set up a notification for when this component hits something blocking
+	if(HasAuthority())
+	{
+		CollisionComp->OnComponentHit.AddDynamic(this, &AShooterBMProjectile::OnHit);		// set up a notification for when this component hits something blocking
+	}
 
 	// Players can't walk on it
 	CollisionComp->SetWalkableSlopeOverride(FWalkableSlopeOverride(WalkableSlope_Unwalkable, 0.f));
@@ -31,15 +37,12 @@ AShooterBMProjectile::AShooterBMProjectile()
 
 	// Die after 3 seconds by default
 	InitialLifeSpan = 3.0f;
-	
-	SetReplicates(true);
-	SetReplicateMovement(true);
 }
 
-void AShooterBMProjectile::OnHit_Implementation(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+void AShooterBMProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	// Only add impulse and destroy projectile if we hit a physics
-	if (HasAuthority() && OtherActor != nullptr && OtherActor != this && OtherComp != nullptr)
+	if (OtherActor != nullptr && OtherActor != this && OtherComp != nullptr)
 	{
 		bool bDestroy = false;
 		if(OtherComp->IsSimulatingPhysics())
@@ -52,13 +55,17 @@ void AShooterBMProjectile::OnHit_Implementation(UPrimitiveComponent* HitComp, AA
 		if(Player != nullptr)
 		{
 			//GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Cyan, TEXT("Player hitted"));
-			Player->TakeDamage(Damage, FDamageEvent(), GetOwner()->GetInstigatorController(), Player);
+			if(HasAuthority())
+			{
+				Player->TakeDamage(Damage, FDamageEvent(), GetOwner()->GetInstigatorController(), Player);
+			}
+			
 			bDestroy = true;
 		}
 		
 		if(bDestroy)
 		{
-			Destroy();	
+			Destroy();
 		}
 	}
 }
