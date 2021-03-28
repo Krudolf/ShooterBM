@@ -95,6 +95,12 @@ protected:
 	UFUNCTION(Server, Reliable)
 	void ServerOnFire();
 
+	UFUNCTION(Server, Reliable)
+	void ServerPlayFireMontage();
+
+	UFUNCTION(NetMulticast, Reliable)
+    void MulticastPlayFireMontage();
+
 	void ChargeSpecialAttack();
 	
 	UFUNCTION(Server, Reliable)

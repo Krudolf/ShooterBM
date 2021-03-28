@@ -16,7 +16,7 @@ AShooterBMPlayerController::AShooterBMPlayerController()
 void AShooterBMPlayerController::Respawn_Implementation()
 {
 	DisableInput(this);
-	GetWorld()->GetTimerManager().SetTimer(RespawnHandle, this, &AShooterBMPlayerController::Spawn, 5.f, false);
+	GetWorld()->GetTimerManager().SetTimer(RespawnHandle, this, &AShooterBMPlayerController::Spawn, 10.f, false);
 }
 
 void AShooterBMPlayerController::Spawn()

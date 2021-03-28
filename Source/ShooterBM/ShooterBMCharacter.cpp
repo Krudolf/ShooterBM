@@ -212,6 +212,16 @@ void AShooterBMCharacter::OnFire()
 	}
 
 	// try and play a firing animation if specified
+	ServerPlayFireMontage();
+}
+
+void AShooterBMCharacter::ServerPlayFireMontage_Implementation()
+{
+	MulticastPlayFireMontage();
+}
+
+void AShooterBMCharacter::MulticastPlayFireMontage_Implementation()
+{
 	if (FireAnimation != nullptr)
 	{
 		// Get the animation object for the arms mesh
