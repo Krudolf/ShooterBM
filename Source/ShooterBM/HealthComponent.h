@@ -24,7 +24,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
 	float Health = 100.f;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Replicated)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float MaxHealth = 100.f;
 	
 public:	
@@ -36,18 +36,18 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void TakeDamage(const float Damage);
 
+	UFUNCTION(Server, Reliable)
+	void ServerTakeDamage(const float Damage);
+
 	UFUNCTION(BlueprintCallable)
 	void Heal(const float HealAmount);
 
 	UFUNCTION(BlueprintCallable)
 	float GetHealthNormalized() const;
 
-	UFUNCTION(BlueprintCallable)
-	float GetHealth() const;
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE float GetHealth() const { return Health;}
 
 	UFUNCTION(BlueprintCallable)
 	void ResetHealth();
-
-	UPROPERTY()
-	FOnTakeDamage OnTakeDamage;
 };

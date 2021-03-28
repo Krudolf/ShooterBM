@@ -12,7 +12,8 @@ UHealthComponent::UHealthComponent()
 	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
 
-	//SetIsReplicated(true);
+	SetNetAddressable();
+	SetIsReplicatedByDefault(true);
 }
 
 
@@ -22,10 +23,7 @@ void UHealthComponent::BeginPlay()
 	Super::BeginPlay();
 
 	Health = MaxHealth;
-	
-	OnTakeDamage.AddDynamic(this, &UHealthComponent::TakeDamage);
 }
-
 
 // Called every frame
 void UHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -36,15 +34,22 @@ void UHealthComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 
 void UHealthComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
 	DOREPLIFETIME(UHealthComponent, Health);
-	DOREPLIFETIME(UHealthComponent, MaxHealth);
 }
 
 void UHealthComponent::TakeDamage(const float Damage)
 {
-	Health = FMath::Max(Health - Damage, 0.f);
+	//Health = FMath::Max(Health - Damage, 0.f);
+	ServerTakeDamage(Damage);
 
 	UE_LOG(LogTemp, Warning, TEXT("Health: %f"), Health);
+}
+
+void UHealthComponent::ServerTakeDamage_Implementation(const float Damage)
+{
+	Health = FMath::Max(Health - Damage, 0.f);
 }
 
 void UHealthComponent::Heal(const float HealAmount)
@@ -57,13 +62,7 @@ float UHealthComponent::GetHealthNormalized() const
 	return Health / MaxHealth;
 }
 
-float UHealthComponent::GetHealth() const
-{
-	return Health;
-}
-
 void UHealthComponent::ResetHealth()
 {
 	Health = MaxHealth;
 }
-
