@@ -35,6 +35,9 @@ class AShooterBMCharacter : public ACharacter
 	//UPROPERTY(VisibleAnywhere)
 	//class UWidgetComponent* HealthBarWidget;
 
+	UPROPERTY(VisibleAnywhere, Replicated)
+	class USphereComponent* SphereSpecialAttack;
+
 public:
 	AShooterBMCharacter();
 
@@ -78,11 +81,29 @@ public:
 	FTimerHandle DestroyHandle;
 
 protected:
+	virtual void Tick(float DeltaSeconds) override;
+	
 	/** Fires a projectile. */
 	void OnFire();
 
 	UFUNCTION(Server, Reliable)
 	void ServerOnFire();
+
+	void ChargeSpecialAttack();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerChargeSpecialAttack();
+
+	UFUNCTION(NetMulticast, Reliable)
+    void IncreaseSphereRadius(const float DeltaSeconds);
+
+	UFUNCTION(NetMulticast, Reliable)
+    void ResetSphereRadius();
+	
+	void ReleaseSpecialAttack();
+	
+	UFUNCTION(Server, Reliable)
+	void ServerReleaseSpecialAttack();
 
 	/** Handles moving forward/backward */
 	void MoveForward(float Val);
@@ -119,6 +140,16 @@ public:
 	FORCEINLINE class USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	/** Returns FirstPersonCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
+
+private:
+	UPROPERTY(VisibleAnywhere, Replicated)
+	bool bChargingSpecialAttack;
+	
+	UPROPERTY(VisibleAnywhere)
+	float InitialSphereSpecialAttackRadius;
+
+	UPROPERTY(EditAnywhere)
+	float MaxSphereSpecialAttackRadius = 400.f;
 
 };
 

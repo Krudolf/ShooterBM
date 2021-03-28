@@ -14,6 +14,7 @@
 #include "ShooterBMGameMode.h"
 #include "ShooterBMPlayerController.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
+#include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
@@ -64,10 +65,18 @@ AShooterBMCharacter::AShooterBMCharacter()
 	// Default offset from the character location for projectiles to spawn
 	GunOffset = FVector(100.0f, 0.0f, 10.0f);
 
+	SphereSpecialAttack = CreateDefaultSubobject<USphereComponent>(TEXT("SpecialAttackRange"));
+	SphereSpecialAttack->SetupAttachment(RootComponent);
+	SphereSpecialAttack->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	SphereSpecialAttack->SetHiddenInGame(false);
+	SphereSpecialAttack->SetIsReplicated(true);
+	InitialSphereSpecialAttackRadius = SphereSpecialAttack->GetScaledSphereRadius();
+
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
+	
 
 	//HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
 }
@@ -112,6 +121,9 @@ void AShooterBMCharacter::SetupPlayerInputComponent(class UInputComponent* Playe
 	PlayerInputComponent->BindAxis("TurnRate", this, &AShooterBMCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
 	PlayerInputComponent->BindAxis("LookUpRate", this, &AShooterBMCharacter::LookUpAtRate);
+
+	PlayerInputComponent->BindAction("SpecialAttack", IE_Pressed, this, &AShooterBMCharacter::ChargeSpecialAttack);
+	PlayerInputComponent->BindAction("SpecialAttack", IE_Released, this, &AShooterBMCharacter::ReleaseSpecialAttack);
 }
 
 void AShooterBMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -119,6 +131,8 @@ void AShooterBMCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
 	//DOREPLIFETIME(AShooterBMCharacter, HealthComponent);
+	DOREPLIFETIME(AShooterBMCharacter, bChargingSpecialAttack);
+	DOREPLIFETIME(AShooterBMCharacter, SphereSpecialAttack);
 }
 
 float AShooterBMCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator,
@@ -161,6 +175,19 @@ void AShooterBMCharacter::Die_Implementation()
 	GetWorld()->GetTimerManager().SetTimer(DestroyHandle, this, &AShooterBMCharacter::CallDestroy, 2.f, false);
 }
 
+void AShooterBMCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	if(HasAuthority())
+	{
+		if(bChargingSpecialAttack)
+		{
+			IncreaseSphereRadius(DeltaSeconds);
+		}
+	}
+}
+
 void AShooterBMCharacter::OnFire()
 {
 	// try and fire a projectile
@@ -190,6 +217,58 @@ void AShooterBMCharacter::OnFire()
 			AnimInstance->Montage_Play(FireAnimation, 1.f);
 		}
 	}
+}
+
+void AShooterBMCharacter::ChargeSpecialAttack()
+{
+	ServerChargeSpecialAttack();
+}
+
+void AShooterBMCharacter::ServerChargeSpecialAttack_Implementation()
+{
+	bChargingSpecialAttack = true;
+	SphereSpecialAttack->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+}
+
+void AShooterBMCharacter::IncreaseSphereRadius_Implementation(const float DeltaSeconds)
+{
+	const float CurrentRadius = SphereSpecialAttack->GetScaledSphereRadius();
+	const float NewRadius = FMath::Min(CurrentRadius + (100 * DeltaSeconds), MaxSphereSpecialAttackRadius);
+	SphereSpecialAttack->SetSphereRadius(NewRadius);
+}
+
+void AShooterBMCharacter::ResetSphereRadius_Implementation()
+{
+	SphereSpecialAttack->SetSphereRadius(InitialSphereSpecialAttackRadius);
+}
+
+void AShooterBMCharacter::ReleaseSpecialAttack()
+{
+	ServerReleaseSpecialAttack();
+}
+
+void AShooterBMCharacter::ServerReleaseSpecialAttack_Implementation()
+{
+	bChargingSpecialAttack = false;
+
+	SphereSpecialAttack->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	TArray<AActor*> OverlappingPlayers;
+	SphereSpecialAttack->GetOverlappingActors(OverlappingPlayers, AShooterBMCharacter::StaticClass());
+	for(AActor* ActorPlayer : OverlappingPlayers)
+	{
+		if(ActorPlayer == this)
+		{
+			continue;
+		}
+
+		AShooterBMCharacter* Player = Cast<AShooterBMCharacter>(ActorPlayer);
+		if(Player != nullptr)
+		{
+			Player->TakeDamage(100.f, FDamageEvent(), GetController(), this);
+		}
+	}
+	ResetSphereRadius();
 }
 
 void AShooterBMCharacter::ServerOnFire_Implementation()
