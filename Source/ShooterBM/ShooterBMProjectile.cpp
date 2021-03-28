@@ -57,7 +57,7 @@ void AShooterBMProjectile::OnHit(UPrimitiveComponent* HitComp, AActor* OtherActo
 			//GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Cyan, TEXT("Player hitted"));
 			if(HasAuthority())
 			{
-				Player->TakeDamage(Damage, FDamageEvent(), GetOwner()->GetInstigatorController(), Player);
+				Player->TakeDamage(Damage, FDamageEvent(), nullptr, Player);
 			}
 			
 			bDestroy = true;

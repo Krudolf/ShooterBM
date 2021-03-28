@@ -70,14 +70,13 @@ AShooterBMCharacter::AShooterBMCharacter()
 	SphereSpecialAttack->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SphereSpecialAttack->SetHiddenInGame(false);
 	SphereSpecialAttack->SetIsReplicated(true);
-	InitialSphereSpecialAttackRadius = SphereSpecialAttack->GetScaledSphereRadius();
+	SphereSpecialAttack->SetSphereRadius(InitialSphereSpecialAttackRadius);
 
 	// Note: The ProjectileClass and the skeletal mesh/anim blueprints for Mesh1P, FP_Gun, and VR_Gun 
 	// are set in the derived blueprint asset named MyCharacter to avoid direct content references in C++.
 
 	HealthComponent = CreateDefaultSubobject<UHealthComponent>(TEXT("HealthComponent"));
 	
-
 	//HealthBarWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthBarWidget"));
 }
 
@@ -175,6 +174,11 @@ void AShooterBMCharacter::Die_Implementation()
 	GetWorld()->GetTimerManager().SetTimer(DestroyHandle, this, &AShooterBMCharacter::CallDestroy, 2.f, false);
 }
 
+float AShooterBMCharacter::GetChargeSpecialAttackNormalized() const
+{
+	return SphereSpecialAttack->GetScaledSphereRadius() / MaxSphereSpecialAttackRadius;
+}
+
 void AShooterBMCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -221,7 +225,10 @@ void AShooterBMCharacter::OnFire()
 
 void AShooterBMCharacter::ChargeSpecialAttack()
 {
-	ServerChargeSpecialAttack();
+	if(!GetWorld()->GetTimerManager().IsTimerActive(CooldownSpecialAttackHandle))
+	{
+		ServerChargeSpecialAttack();
+	}
 }
 
 void AShooterBMCharacter::ServerChargeSpecialAttack_Implementation()
@@ -233,7 +240,7 @@ void AShooterBMCharacter::ServerChargeSpecialAttack_Implementation()
 void AShooterBMCharacter::IncreaseSphereRadius_Implementation(const float DeltaSeconds)
 {
 	const float CurrentRadius = SphereSpecialAttack->GetScaledSphereRadius();
-	const float NewRadius = FMath::Min(CurrentRadius + (100 * DeltaSeconds), MaxSphereSpecialAttackRadius);
+	const float NewRadius = FMath::Min(CurrentRadius + (100 * DeltaSeconds * SpecialAttackChargeSpeed), MaxSphereSpecialAttackRadius);
 	SphereSpecialAttack->SetSphereRadius(NewRadius);
 }
 
@@ -244,7 +251,11 @@ void AShooterBMCharacter::ResetSphereRadius_Implementation()
 
 void AShooterBMCharacter::ReleaseSpecialAttack()
 {
-	ServerReleaseSpecialAttack();
+	if(!GetWorld()->GetTimerManager().IsTimerActive(CooldownSpecialAttackHandle))
+	{
+		GetWorld()->GetTimerManager().SetTimer(CooldownSpecialAttackHandle, 10.f, false);
+		ServerReleaseSpecialAttack();
+	}
 }
 
 void AShooterBMCharacter::ServerReleaseSpecialAttack_Implementation()
@@ -287,8 +298,7 @@ void AShooterBMCharacter::ServerOnFire_Implementation()
 			ActorSpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButDontSpawnIfColliding;
 
 			// spawn the projectile at the muzzle
-			AShooterBMProjectile* TempProjectile = World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
-			TempProjectile->SetOwner(GetController());
+			World->SpawnActor<AShooterBMProjectile>(ProjectileClass, SpawnLocation, SpawnRotation, ActorSpawnParams);
 		}
 	}
 }

@@ -80,6 +80,12 @@ public:
 	
 	FTimerHandle DestroyHandle;
 
+	UPROPERTY(BlueprintReadOnly)
+	FTimerHandle CooldownSpecialAttackHandle;
+
+	UFUNCTION(BlueprintCallable, BlueprintPure)
+	float GetChargeSpecialAttackNormalized() const;
+
 protected:
 	virtual void Tick(float DeltaSeconds) override;
 	
@@ -141,15 +147,21 @@ public:
 	/** Returns FirstPersonCameraComponent subobject **/
 	FORCEINLINE class UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	UFUNCTION(BlueprintPure)
+	FORCEINLINE bool IsChargingSpecialAttack() const { return bChargingSpecialAttack; }
+
 private:
-	UPROPERTY(VisibleAnywhere, Replicated)
+	UPROPERTY(VisibleAnywhere, Replicated, Category = "SpecialAttack")
 	bool bChargingSpecialAttack;
 	
-	UPROPERTY(VisibleAnywhere)
-	float InitialSphereSpecialAttackRadius;
+	UPROPERTY(VisibleAnywhere, Category = "SpecialAttack")
+	float InitialSphereSpecialAttackRadius = 0.f;
 
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category = "SpecialAttack")
 	float MaxSphereSpecialAttackRadius = 400.f;
+
+	UPROPERTY(EditAnywhere, Category = "SpecialAttack")
+	float SpecialAttackChargeSpeed = 1.f;
 
 };
 

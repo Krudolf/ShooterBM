@@ -4,6 +4,7 @@
 #include "ShooterBMPlayerController.h"
 
 #include "ShooterBMGameMode.h"
+#include "GameFramework/HUD.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -14,6 +15,7 @@ AShooterBMPlayerController::AShooterBMPlayerController()
 
 void AShooterBMPlayerController::Respawn_Implementation()
 {
+	DisableInput(this);
 	GetWorld()->GetTimerManager().SetTimer(RespawnHandle, this, &AShooterBMPlayerController::Spawn, 5.f, false);
 }
 
@@ -25,6 +27,7 @@ void AShooterBMPlayerController::Spawn()
 		if(APawn* NewPawn = GetWorld()->SpawnActor<APawn>(GameMode->DefaultPawnClass, SpawnPoint->GetActorLocation(), SpawnPoint->GetActorRotation()))
 		{
 			this->Possess(NewPawn);
+			EnableInput(this);
 		}		
 	}
 }
