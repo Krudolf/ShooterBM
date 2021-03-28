@@ -187,7 +187,7 @@ void AShooterBMCharacter::Tick(float DeltaSeconds)
 	{
 		if(bChargingSpecialAttack)
 		{
-			IncreaseSphereRadius(DeltaSeconds);
+			MulticastIncreaseSphereRadius(DeltaSeconds);
 		}
 	}
 }
@@ -247,14 +247,14 @@ void AShooterBMCharacter::ServerChargeSpecialAttack_Implementation()
 	SphereSpecialAttack->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 }
 
-void AShooterBMCharacter::IncreaseSphereRadius_Implementation(const float DeltaSeconds)
+void AShooterBMCharacter::MulticastIncreaseSphereRadius_Implementation(const float DeltaSeconds)
 {
 	const float CurrentRadius = SphereSpecialAttack->GetScaledSphereRadius();
 	const float NewRadius = FMath::Min(CurrentRadius + (100 * DeltaSeconds * SpecialAttackChargeSpeed), MaxSphereSpecialAttackRadius);
 	SphereSpecialAttack->SetSphereRadius(NewRadius);
 }
 
-void AShooterBMCharacter::ResetSphereRadius_Implementation()
+void AShooterBMCharacter::MulticastResetSphereRadius_Implementation()
 {
 	SphereSpecialAttack->SetSphereRadius(InitialSphereSpecialAttackRadius);
 }
@@ -289,7 +289,7 @@ void AShooterBMCharacter::ServerReleaseSpecialAttack_Implementation()
 			Player->TakeDamage(100.f, FDamageEvent(), GetController(), this);
 		}
 	}
-	ResetSphereRadius();
+	MulticastResetSphereRadius();
 }
 
 void AShooterBMCharacter::ServerOnFire_Implementation()

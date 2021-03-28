@@ -107,10 +107,10 @@ protected:
 	void ServerChargeSpecialAttack();
 
 	UFUNCTION(NetMulticast, Reliable)
-    void IncreaseSphereRadius(const float DeltaSeconds);
+    void MulticastIncreaseSphereRadius(const float DeltaSeconds);
 
 	UFUNCTION(NetMulticast, Reliable)
-    void ResetSphereRadius();
+    void MulticastResetSphereRadius();
 	
 	void ReleaseSpecialAttack();
 	
